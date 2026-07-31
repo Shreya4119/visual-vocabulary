@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Kijk — learn Dutch through your camera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --ink:#111219;
+    --ink-2:#181A24;
+    --surface:#1F2230;
+    --surface-2:#272B3B;
+    --line:#333849;
+    --text:#F4F2EC;
+    --muted:#8F93A6;
+    --de:#F4A03C;      /* de-woorden  */
+    --de-dim:#5a3f1e;
+    --het:#4FD1C5;     /* het-woorden */
+    --het-dim:#1d4a47;
+    --danger:#E5687A;
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:"Inter",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;gap:14px;flex:none;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,var(--ink-2),var(--ink));
+    z-index:5;
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+  .brand h1{
+    font-family:"Bricolage Grotesque",sans-serif;
+    font-weight:800;font-size:26px;letter-spacing:-0.02em;line-height:1;
+  }
+  .brand .eyebrow{
+    font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
+    white-space:nowrap;
+  }
+  .status{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+    white-space:nowrap;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.live{background:var(--het);box-shadow:0 0 0 0 var(--het);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,209,197,.5)}70%{box-shadow:0 0 0 7px rgba(79,209,197,0)}100%{box-shadow:0 0 0 0 rgba(79,209,197,0)}}
+  .count{font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
+
+  /* ---------- stage ---------- */
+  .stage-wrap{
+    flex:1;min-height:0;position:relative;
+    display:flex;align-items:center;justify-content:center;
+    padding:12px;
+  }
+  .stage{
+    position:relative;
+    max-width:100%;max-height:100%;
+    border-radius:var(--radius);overflow:hidden;
+    background:#000;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    aspect-ratio:4/3;width:auto;
+  }
+  video{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:fill;display:block;background:#000;
+  }
+  #overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .labels{position:absolute;inset:0;pointer-events:none}
+
+  .label{
+    position:absolute;transform:translate(-1px,-100%);
+    display:flex;align-items:stretch;
+    font-weight:600;font-size:13px;line-height:1;
+    border-radius:8px;overflow:hidden;pointer-events:auto;cursor:pointer;
+    box-shadow:0 3px 10px rgba(0,0,0,.4);
+    animation:pop .18s ease-out;
+    white-space:nowrap;
+  }
+  @keyframes pop{from{opacity:0;transform:translate(-1px,calc(-100% + 5px)) scale(.96)}to{opacity:1}}
+  .label .art{
+    padding:5px 7px;font-weight:800;color:#111;
+    display:flex;align-items:center;
+  }
+  .label .noun{padding:5px 9px;background:rgba(17,18,25,.86);backdrop-filter:blur(4px)}
+  .label.de  .art{background:var(--de)}
+  .label.het .art{background:var(--het)}
+  .label .en{color:var(--muted);font-weight:400;margin-left:6px;font-size:11px}
+
+  /* ---------- empty / prompt state ---------- */
+  .prompt{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    gap:18px;padding:28px;background:radial-gradient(120% 90% at 50% 30%,#20232f,#0d0e14);
+    z-index:3;
+  }
+  .prompt.hide{display:none}
+  .prompt h2{
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:clamp(22px,4vw,32px);letter-spacing:-0.02em;max-width:16ch;line-height:1.1;
+  }
+  .prompt p{color:var(--muted);font-size:14px;max-width:38ch;line-height:1.5}
+  .cta{
+    font-family:"Inter",sans-serif;font-weight:600;font-size:15px;
+    color:#111;background:var(--de);border:none;border-radius:999px;
+    padding:13px 26px;cursor:pointer;transition:transform .12s ease, filter .12s ease;
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .cta:hover{filter:brightness(1.06)}
+  .cta:active{transform:scale(.97)}
+  .cta:focus-visible{outline:3px solid var(--het);outline-offset:3px}
+  .cta svg{width:18px;height:18px}
+  .err{color:var(--danger);font-size:13px;max-width:40ch;line-height:1.5}
+
+  .loader{
+    width:34px;height:34px;border-radius:50%;
+    border:3px solid var(--surface-2);border-top-color:var(--de);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- vocabulary shelf ---------- */
+  .shelf{
+    flex:none;border-top:1px solid var(--line);
+    background:var(--ink-2);
+    padding:12px 0 14px;
+  }
+  .shelf-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    padding:0 18px 10px;
+  }
+  .shelf-head .t{
+    font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);
+  }
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .swatch{width:10px;height:10px;border-radius:3px;flex:none}
+  .swatch.de{background:var(--de)}.swatch.het{background:var(--het)}
+
+  .track{
+    display:flex;gap:10px;overflow-x:auto;padding:0 18px 2px;
+    scrollbar-width:thin;scrollbar-color:var(--surface-2) transparent;
+  }
+  .track::-webkit-scrollbar{height:6px}
+  .track::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:99px}
+  .track .empty{color:var(--muted);font-size:13px;padding:14px 2px}
+
+  .card{
+    flex:none;min-width:120px;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;cursor:pointer;position:relative;
+    transition:transform .12s ease,border-color .12s ease,background .12s ease;
+    text-align:left;font-family:inherit;color:inherit;
+    animation:slidein .28s cubic-bezier(.2,.7,.2,1);
+    border-left-width:3px;
+  }
+  .card.de{border-left-color:var(--de)}
+  .card.het{border-left-color:var(--het)}
+  @keyframes slidein{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1}}
+  .card:hover{background:var(--surface-2);transform:translateY(-2px)}
+  .card:focus-visible{outline:2px solid var(--het);outline-offset:2px}
+  .card .word{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.01em}
+  .card .word .art{opacity:.9}
+  .card.de .word .art{color:var(--de)}
+  .card.het .word .art{color:var(--het)}
+  .card .en{color:var(--muted);font-size:12px;margin-top:3px}
+  .card .spk{position:absolute;top:9px;right:9px;color:var(--muted);opacity:.7}
+  .card .spk svg{width:14px;height:14px;display:block}
+  .card .seen{position:absolute;bottom:9px;right:10px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  @media (max-width:560px){
+    .brand h1{font-size:22px}
+    .brand .eyebrow{display:none}
+    .stage-wrap{padding:0}
+    .stage{border-radius:0;max-height:100%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Kijk</h1>
+    <span class="eyebrow">point &amp; learn — Dutch</span>
+  </div>
+  <div class="status">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">Not started</span>
+    <span class="count" id="wordCount"></span>
+  </div>
+</header>
+
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+    <div class="labels" id="labels"></div>
+
+    <div class="prompt" id="prompt">
+      <div id="promptInner">
+        <h2>Turn your room into a Dutch vocabulary list.</h2>
+        <p>Allow camera access, then sweep across your desk, kitchen, or shelf. Objects get named in Dutch — with their <b>de</b>/<b>het</b> article — and drop into your word shelf below. Tap any word to hear it.</p>
+        <button class="cta" id="startBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Start camera
+        </button>
+        <p class="err" id="errMsg" style="display:none"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="shelf">
+  <div class="shelf-head">
+    <span class="t">Word shelf · this session</span>
+    <div class="legend">
+      <span><i class="swatch de"></i>de-woord</span>
+      <span><i class="swatch het"></i>het-woord</span>
+    </div>
+  </div>
+  <div class="track" id="track">
+    <div class="empty" id="trackEmpty">Words you spot will collect here…</div>
+  </div>
+</div>
+
+<!-- On-device ML: TensorFlow.js + COCO-SSD object detection -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script>
+/* ---------- Dutch dictionary: COCO-SSD class -> {article, noun, en} ---------- */
+const NL = {
+  "person":{a:"de",w:"persoon",en:"person"},
+  "bicycle":{a:"de",w:"fiets",en:"bicycle"},
+  "car":{a:"de",w:"auto",en:"car"},
+  "motorcycle":{a:"de",w:"motor",en:"motorcycle"},
+  "airplane":{a:"het",w:"vliegtuig",en:"airplane"},
+  "bus":{a:"de",w:"bus",en:"bus"},
+  "train":{a:"de",w:"trein",en:"train"},
+  "truck":{a:"de",w:"vrachtwagen",en:"truck"},
+  "boat":{a:"de",w:"boot",en:"boat"},
+  "traffic light":{a:"het",w:"verkeerslicht",en:"traffic light"},
+  "fire hydrant":{a:"de",w:"brandkraan",en:"fire hydrant"},
+  "stop sign":{a:"het",w:"stopbord",en:"stop sign"},
+  "parking meter":{a:"de",w:"parkeermeter",en:"parking meter"},
+  "bench":{a:"de",w:"bank",en:"bench"},
+  "bird":{a:"de",w:"vogel",en:"bird"},
+  "cat":{a:"de",w:"kat",en:"cat"},
+  "dog":{a:"de",w:"hond",en:"dog"},
+  "horse":{a:"het",w:"paard",en:"horse"},
+  "sheep":{a:"het",w:"schaap",en:"sheep"},
+  "cow":{a:"de",w:"koe",en:"cow"},
+  "elephant":{a:"de",w:"olifant",en:"elephant"},
+  "bear":{a:"de",w:"beer",en:"bear"},
+  "zebra":{a:"de",w:"zebra",en:"zebra"},
+  "giraffe":{a:"de",w:"giraf",en:"giraffe"},
+  "backpack":{a:"de",w:"rugzak",en:"backpack"},
+  "umbrella":{a:"de",w:"paraplu",en:"umbrella"},
+  "handbag":{a:"de",w:"handtas",en:"handbag"},
+  "tie":{a:"de",w:"stropdas",en:"tie"},
+  "suitcase":{a:"de",w:"koffer",en:"suitcase"},
+  "frisbee":{a:"de",w:"frisbee",en:"frisbee"},
+  "skis":{a:"de",w:"ski's",en:"skis"},
+  "snowboard":{a:"het",w:"snowboard",en:"snowboard"},
+  "sports ball":{a:"de",w:"bal",en:"ball"},
+  "kite":{a:"de",w:"vlieger",en:"kite"},
+  "baseball bat":{a:"de",w:"honkbalknuppel",en:"baseball bat"},
+  "baseball glove":{a:"de",w:"honkbalhandschoen",en:"baseball glove"},
+  "skateboard":{a:"het",w:"skateboard",en:"skateboard"},
+  "surfboard":{a:"de",w:"surfplank",en:"surfboard"},
+  "tennis racket":{a:"het",w:"tennisracket",en:"tennis racket"},
+  "bottle":{a:"de",w:"fles",en:"bottle"},
+  "wine glass":{a:"het",w:"wijnglas",en:"wine glass"},
+  "cup":{a:"de",w:"kop",en:"cup"},
+  "fork":{a:"de",w:"vork",en:"fork"},
+  "knife":{a:"het",w:"mes",en:"knife"},
+  "spoon":{a:"de",w:"lepel",en:"spoon"},
+  "bowl":{a:"de",w:"kom",en:"bowl"},
+  "banana":{a:"de",w:"banaan",en:"banana"},
+  "apple":{a:"de",w:"appel",en:"apple"},
+  "sandwich":{a:"de",w:"boterham",en:"sandwich"},
+  "orange":{a:"de",w:"sinaasappel",en:"orange"},
+  "broccoli":{a:"de",w:"broccoli",en:"broccoli"},
+  "carrot":{a:"de",w:"wortel",en:"carrot"},
+  "hot dog":{a:"de",w:"hotdog",en:"hot dog"},
+  "pizza":{a:"de",w:"pizza",en:"pizza"},
+  "donut":{a:"de",w:"donut",en:"donut"},
+  "cake":{a:"de",w:"taart",en:"cake"},
+  "chair":{a:"de",w:"stoel",en:"chair"},
+  "couch":{a:"de",w:"bank",en:"couch"},
+  "potted plant":{a:"de",w:"kamerplant",en:"potted plant"},
+  "bed":{a:"het",w:"bed",en:"bed"},
+  "dining table":{a:"de",w:"eettafel",en:"dining table"},
+  "toilet":{a:"het",w:"toilet",en:"toilet"},
+  "tv":{a:"de",w:"tv",en:"TV"},
+  "laptop":{a:"de",w:"laptop",en:"laptop"},
+  "mouse":{a:"de",w:"muis",en:"mouse"},
+  "remote":{a:"de",w:"afstandsbediening",en:"remote"},
+  "keyboard":{a:"het",w:"toetsenbord",en:"keyboard"},
+  "cell phone":{a:"de",w:"mobiele telefoon",en:"cell phone"},
+  "microwave":{a:"de",w:"magnetron",en:"microwave"},
+  "oven":{a:"de",w:"oven",en:"oven"},
+  "toaster":{a:"het",w:"broodrooster",en:"toaster"},
+  "sink":{a:"de",w:"gootsteen",en:"sink"},
+  "refrigerator":{a:"de",w:"koelkast",en:"refrigerator"},
+  "book":{a:"het",w:"boek",en:"book"},
+  "clock":{a:"de",w:"klok",en:"clock"},
+  "vase":{a:"de",w:"vaas",en:"vase"},
+  "scissors":{a:"de",w:"schaar",en:"scissors"},
+  "teddy bear":{a:"de",w:"teddybeer",en:"teddy bear"},
+  "hair drier":{a:"de",w:"föhn",en:"hair dryer"},
+  "toothbrush":{a:"de",w:"tandenborstel",en:"toothbrush"},
+};
+
+const SCORE_THRESHOLD = 0.55;
+
+const video   = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const ctx     = overlay.getContext('2d');
+const labelsEl= document.getElementById('labels');
+const stage   = document.getElementById('stage');
+const prompt  = document.getElementById('prompt');
+const promptInner = document.getElementById('promptInner');
+const startBtn= document.getElementById('startBtn');
+const errMsg  = document.getElementById('errMsg');
+const statusDot = document.getElementById('statusDot');
+const statusText= document.getElementById('statusText');
+const wordCount = document.getElementById('wordCount');
+const track   = document.getElementById('track');
+const trackEmpty = document.getElementById('trackEmpty');
+
+let model = null;
+let running = false;
+const collected = new Map();   // dutch class -> count
+
+/* ---------- speech ---------- */
+let nlVoice = null;
+function pickVoice(){
+  const voices = speechSynthesis.getVoices();
+  nlVoice = voices.find(v=>/^nl/i.test(v.lang)) || null;
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'nl-NL';
+  if(nlVoice) u.voice = nlVoice;
+  u.rate = 0.92;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- start ---------- */
+startBtn.addEventListener('click', start);
+
+async function start(){
+  errMsg.style.display='none';
+  promptInner.innerHTML = '<div class="loader"></div><p>Waking up the camera and loading the detector…</p>';
+  statusText.textContent = 'Loading…';
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:960} },
+      audio:false
+    });
+    video.srcObject = stream;
+    await video.play();
+    await new Promise(r=>{ if(video.readyState>=2) r(); else video.onloadeddata=r; });
+
+    // size the stage to the real camera aspect ratio
+    stage.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+    overlay.width  = video.videoWidth;
+    overlay.height = video.videoHeight;
+
+    model = await cocoSsd.load({base:'lite_mobilenet_v2'});
+
+    prompt.classList.add('hide');
+    statusDot.classList.add('live');
+    statusText.textContent = 'Scanning';
+    running = true;
+    loop();
+  }catch(e){
+    console.error(e);
+    let msg = e && e.message ? e.message : String(e);
+    if(e && (e.name==='NotAllowedError'||e.name==='SecurityError')){
+      msg = "Camera permission was blocked. Allow it in the address bar and reload. If you opened this file directly and it still won't allow the camera, run it from a local server (e.g. <code>python3 -m http.server</code>) and open http://localhost:8000.";
+    } else if(e && e.name==='NotFoundError'){
+      msg = "No camera was found on this device.";
+    }
+    promptInner.innerHTML = '';
+    const h=document.createElement('h2'); h.textContent="Couldn't start the camera";
+    const p=document.createElement('p'); p.className='err'; p.innerHTML=msg;
+    const b=document.createElement('button'); b.className='cta'; b.textContent='Try again';
+    b.onclick=start;
+    promptInner.append(h,p,b);
+    statusText.textContent='Error';
+  }
+}
+
+/* ---------- detection loop ---------- */
+async function loop(){
+  if(!running) return;
+  let preds = [];
+  try{ preds = await model.detect(video, 20); }
+  catch(e){ /* frame not ready */ }
+
+  const known = preds.filter(p => p.score>=SCORE_THRESHOLD && NL[p.class]);
+  draw(known);
+  known.forEach(p => collect(p.class));
+
+  requestAnimationFrame(loop);
+}
+
+/* ---------- draw boxes + labels ---------- */
+function draw(preds){
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  labelsEl.innerHTML='';
+
+  const rect = video.getBoundingClientRect();
+  const sx = rect.width / video.videoWidth;
+  const sy = rect.height / video.videoHeight;
+
+  preds.forEach(p=>{
+    const [x,y,w,h] = p.bbox;
+    const info = NL[p.class];
+    const color = info.a==='de' ? getCss('--de') : getCss('--het');
+
+    // box on canvas (intrinsic coords)
+    ctx.lineWidth = Math.max(2, overlay.width*0.003);
+    ctx.strokeStyle = color;
+    ctx.strokeRect(x,y,w,h);
+
+    // label chip in DOM (rendered coords)
+    const el = document.createElement('div');
+    el.className = 'label '+info.a;
+    el.style.left = (x*sx)+'px';
+    el.style.top  = (y*sy)+'px';
+    el.innerHTML =
+      `<span class="art">${info.a}</span>`+
+      `<span class="noun">${info.w}<span class="en">${info.en}</span></span>`;
+    el.title = 'Tap to hear';
+    el.addEventListener('click',()=>speak(info.a+' '+info.w));
+    labelsEl.appendChild(el);
+  });
+}
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ---------- collect into word shelf ---------- */
+function collect(cls){
+  const info = NL[cls];
+  if(collected.has(cls)){
+    const n = collected.get(cls)+1;
+    collected.set(cls,n);
+    const seen = document.querySelector(`.card[data-cls="${cls}"] .seen`);
+    if(seen) seen.textContent = '×'+n;
+    return;
+  }
+  collected.set(cls,1);
+  trackEmpty.style.display='none';
+
+  const card = document.createElement('button');
+  card.className = 'card '+info.a;
+  card.dataset.cls = cls;
+  card.innerHTML =
+    `<span class="spk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg></span>`+
+    `<div class="word"><span class="art">${info.a}</span> ${info.w}</div>`+
+    `<div class="en">${info.en}</div>`+
+    `<span class="seen">×1</span>`;
+  card.addEventListener('click',()=>speak(info.a+' '+info.w));
+  track.insertBefore(card, track.firstChild);
+  speak(info.a+' '+info.w);          // say each new word once
+  updateCount();
+}
+function updateCount(){
+  const n = collected.size;
+  wordCount.textContent = n ? '· '+n+' word'+(n>1?'s':'') : '';
+}
+
+/* keep label overlay aligned if the window resizes */
+window.addEventListener('resize',()=>{ if(running) draw([]); });
+</script>
+</body>
+</html>
